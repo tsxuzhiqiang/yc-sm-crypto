@@ -1637,17 +1637,8 @@ const C1C2C3 = 0;
 /*
  * Encrypt Hutool 加密
  */
-function Encrypt(msg, publicKey, {
-  cipherMode = 1, // 加密默认排列顺序
-  dataType = 'String' // data默认的数据类型 为16进制 或者 原始字符 可选项 Hex Or String
-} = {}) {
-  if (dataType === 'String') {
-    // 现将字符串转成16进制 然后再转成数字
-    msg = _.hexToArray(_.utf8ToHex(msg));
-  } else if (dataType === 'Hex') {
-    // //如果是Hex直接转成字节数组
-    msg = _.hexToArray(msg);
-  }
+function Encrypt(msg, publicKey, cipherMode = 1) {
+  msg = typeof msg === 'string' ? _.hexToArray(_.utf8ToHex(msg)) : Array.prototype.slice.call(msg);
   // 先将公钥转成点
   publicKey = _.getGlobalCurve().decodePointHex(publicKey);
   const keypair = _.generateKeyPairHex();
@@ -1751,16 +1742,31 @@ function Decrypt(encryptData, privateKey, {
 
 /**
  * 签名
+ * @dataType  Hex String Array
  */
 function Sign(msg, privateKey, {
-  pointPool, der, hash, publicKey, userId
+  pointPool, der, hash, publicKey, userId, dataType = 'String', userIdType = 'String'
 } = {}) {
-  let hashHex = typeof msg === 'string' ? _.utf8ToHex(msg) : _.arrayToHex(msg);
+  let hashHex = '';
+  if (dataType === 'Hex') {
+    hashHex = msg;
+  } else if (dataType === 'String') {
+    hashHex = _.utf8ToHex(msg);
+  } else if (Array.isArray(msg)) {
+    hashHex = _.arrayToHex(msg);
+  } else {
+    hashHex = _.utf8ToHex(msg);
+  }
+  // hashHex = typeof msg === 'string' ? _.utf8ToHex(msg) : _.arrayToHex(msg)
 
   if (hash) {
     // sm3杂凑
     publicKey = publicKey || getPublicKeyFromPrivateKey(privateKey);
-    hashHex = getHash(hashHex, publicKey, userId);
+    if (userIdType === 'Hex') {
+      hashHex = getHash(hashHex, publicKey, _.hexToArray(userId));
+    } else {
+      hashHex = getHash(hashHex, publicKey, userId);
+    }
   }
 
   const dA = new BigInteger(privateKey, 16);
@@ -1797,15 +1803,32 @@ function Sign(msg, privateKey, {
 /**
  * 验签
  */
-function VerifySign(msg, signHex, publicKey, { der, hash, userId } = {}) {
-  let hashHex = typeof msg === 'string' ? _.utf8ToHex(msg) : _.arrayToHex(msg);
+function VerifySign(msg, signHex, publicKey, {
+  der, hash, userId, dataType = 'String', userIdType = 'String'
+} = {}) {
+  let hashHex = '';
+  if (dataType === 'Hex') {
+    hashHex = msg;
+  } else if (dataType === 'String') {
+    hashHex = _.utf8ToHex(msg);
+  } else if (Array.isArray(msg)) {
+    hashHex = _.arrayToHex(msg);
+  } else {
+    hashHex = _.utf8ToHex(msg);
+  }
+  // let hashHex = typeof msg === 'string' ? _.utf8ToHex(msg) : _.arrayToHex(msg)
 
   if (hash) {
     // sm3杂凑
-    hashHex = getHash(hashHex, publicKey, userId);
+    if (userIdType === 'Hex') {
+      hashHex = getHash(hashHex, publicKey, _.hexToArray(userId));
+    } else {
+      hashHex = getHash(hashHex, publicKey, userId);
+    }
   }
 
-  let r;let s;
+  let r;
+  let s;
   if (der) {
     const decodeDerObj = decodeDer(signHex); // asn.1 der 解码
     r = decodeDerObj.r;

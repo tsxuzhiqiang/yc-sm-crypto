@@ -1,6 +1,6 @@
 {
   "name": "yc-sm-crypto",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "SM2加密和解密 以及验签，SM4加密  可以结合Hutools使用",
   "main": "src/index.js",
   "scripts": {
